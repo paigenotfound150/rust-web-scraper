@@ -1,13 +1,11 @@
-use scraper::Selector;
-
 
 //Below is all the useful information we want to extract - to make things easier for ourselves
 // we'll make a struct called Recipe to store our info (Rust is not an OOP language, no classes)
+#[derive(Debug)]
 struct Recipe {
+    url: Option<String>, //href
     title: Option<String>, //span.card__title-text
-    star_rating: Option<String>, //div.mntl-recipe-star-racting_1-0
-    ratings_total: Option<u32>, //div.recipe-card-meta__rating-count-number
-    url: Option<String>, //data-tax-levels href
+    image: Option<String>, //img data-src
 }
 
 
@@ -25,11 +23,18 @@ fn main() {
     //parse defines a Scraper selector object. It's passed to select to select those elemnts from the html document
     let html_recipe_selector = scraper::Selector::parse("a.mntl-card").unwrap();
 
+       // We want a dynamic array of our recipes (contiguous growable array is Vec)
+    let mut recipes: Vec<Recipe> = Vec::new();
     for html_recipe in document.select(&html_recipe_selector) {
 
         //create a new recipe object
         let url = html_recipe.attr("href")
         .map(str::to_owned);
+
+        let title = html_recipe
+        .select(&scraper::Selector::parse("span.card__title-text").unwrap())
+        .next()
+        .map(|span| span.text().collect::<String>());
 
         let image = html_recipe
         .select(&scraper::Selector::parse("img").unwrap())
@@ -37,13 +42,26 @@ fn main() {
         .and_then(|img| img.value().attr("data-src"))
         .map(str::to_owned);
   
-        println!("{:?}", image);
+        let new_recipe = Recipe {
+            url, 
+            title,
+            image
+        };
+        recipes.push(new_recipe);
     }
-   // println!("{:?}", html_recipes);
-   // We want a dynamic array of our recipes (contiguous growable array is Vec)
-   let mut recipes: Vec<Recipe> = Vec::new();
 
-   // Iterate over list of recipes and scrape the data we want
+    let path = std::path::Path::new("recipes.csv");
+    let mut writer = csv::Writer::from_path(path).unwrap();
+
+    writer.write_record(&["url","title","image"]).unwrap();
+
+    for recipe in recipes {
+        let url = recipe.url.unwrap();
+        let title = recipe.title.unwrap();
+        let image = recipe.image.unwrap();
+        writer.write_record(&[url,title,image]).unwrap();
+    }
+    writer.flush().unwrap();
 
 
 }

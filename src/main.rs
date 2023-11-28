@@ -50,7 +50,7 @@ fn main() {
         recipes.push(new_recipe);
     }
 
-    let path = std::path::Path::new("recipes.csv");
+    let path = std::path::Path::new("../ui-scraper/public/recipes.csv");
     let mut writer = csv::Writer::from_path(path).unwrap();
 
     writer.write_record(&["url","title","image"]).unwrap();

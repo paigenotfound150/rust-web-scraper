@@ -11,21 +11,22 @@ struct Recipe {
 
 fn main() {
     // Get target webpage and parse into html
-    let response = reqwest::blocking::get("https://www.allrecipes.com/recipes/198/holidays-and-events/thanksgiving/");
-    let html_content = response.unwrap().text().unwrap();
-    // Above Reqwest is sending an HTTP GET to the url . blocking ensures it happens so that execution only occurs when you get a response from the server. 
-    // 
-    
-    // Get the data we need, AKA each recipe
-    //Below converts to an html tree that's easier to parse
-    let document = scraper::Html::parse_document(&html_content);
+    fn fetchData(url: String, fileName: String) {
 
-    //parse defines a Scraper selector object. It's passed to select to select those elemnts from the html document
-    let html_recipe_selector = scraper::Selector::parse("a.mntl-card").unwrap();
+        let response = reqwest::blocking::get(url);
+        let html_content = response.unwrap().text().unwrap();
+        // Above Reqwest is sending an HTTP GET to the url . blocking ensures it happens so that execution only occurs when you get a response from the server. 
+    
+        // Get the data we need, AKA each recipe
+        //Below converts to an html tree that's easier to parse
+        let document = scraper::Html::parse_document(&html_content);
+
+        //parse defines a Scraper selector object. It's passed to select to select those elemnts from the html document
+        let html_recipe_selector = scraper::Selector::parse("a.mntl-card").unwrap();
 
        // We want a dynamic array of our recipes (contiguous growable array is Vec)
-    let mut recipes: Vec<Recipe> = Vec::new();
-    for html_recipe in document.select(&html_recipe_selector) {
+        let mut recipes: Vec<Recipe> = Vec::new();
+        for html_recipe in document.select(&html_recipe_selector) {
 
         //create a new recipe object
         let url = html_recipe.attr("href")
@@ -49,8 +50,8 @@ fn main() {
         };
         recipes.push(new_recipe);
     }
-
-    let path = std::path::Path::new("../ui-scraper/public/recipes.csv");
+    let pathStr = format!("../ui-scraper/public/{}.csv", fileName);
+    let path = std::path::Path::new(&pathStr);
     let mut writer = csv::Writer::from_path(path).unwrap();
 
     writer.write_record(&["url","title","image"]).unwrap();
@@ -62,6 +63,15 @@ fn main() {
         writer.write_record(&[url,title,image]).unwrap();
     }
     writer.flush().unwrap();
+    }
 
+    fetchData("https://www.allrecipes.com/recipes/198/holidays-and-events/thanksgiving/".to_owned(), "holidays".to_owned());
+    fetchData("https://www.allrecipes.com/recipes/201/meat-and-poultry/chicken/".to_owned(), "chicken".to_owned());
+    fetchData("https://www.allrecipes.com/recipes/200/meat-and-poultry/beef/".to_owned(), "beef".to_owned());
+    fetchData("https://www.allrecipes.com/recipes/93/seafood/".to_owned(), "seafood".to_owned());
+    fetchData("https://www.allrecipes.com/recipes/95/pasta-and-noodles/".to_owned(), "pasta".to_owned());
+    fetchData("https://www.allrecipes.com/recipes/1059/fruits-and-vegetables/vegetables/".to_owned(), "veggies".to_owned());
+
+    
 
 }

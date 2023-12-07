@@ -8,13 +8,14 @@ struct Recipe {
     image: String, //img data-src
     bio: String, // id = article-heading_1-0
     times: String,
+    ingredients: String,
 }
 
 #[derive(Debug)]
 struct RecipeDetail {
     times: String, // div.mntl-recipe-details__value"
-    // ingredients: Option<String>, // li class = mntl-structured-ingredients__list-item, then its within the ps
     bio: String, // id = article-heading_1-0
+    ingredients: String, // li class = mntl-structured-ingredients__list-item
 }
 
 
@@ -34,23 +35,41 @@ fn main() {
             Some(ref x) => x,
         }.to_string();
 
-        //Retrieving time
+        //Retrieving prep times
         let times_selector = scraper::Selector::parse("div.mntl-recipe-details__value").unwrap();
         let times_string = document.select(&times_selector).map(|x| x.inner_html());
         let mut times = "".to_owned();
         times_string
             .zip(1..5)
             .for_each(|(item, id)| {
-                println!("{}, {}", item, id);
                 times.push_str(&item);
+                //Delimiter
+                times.push_str("!");
         });
         
+        let ingredients_selector = scraper::Selector::parse("li.mntl-structured-ingredients__list-item").unwrap();
+        let ingredients_string = document.select(&ingredients_selector).map(|x| x);
 
-        // let ingredients = document.select(&ingr_selector).next().map(|x| x.inner_html());
+        // Have to grab each individual span for the ingredients
+        let mut ingredients = "".to_owned();
+        for ingredient_html in ingredients_string {
+            let mut ingredient = "".to_owned();
+            let span_selector = scraper::Selector::parse("span").unwrap();
+            let span_string = ingredient_html.select(&span_selector).map(|x| x.inner_html());
+            span_string.for_each(|span| {
+                ingredient.push_str(&span);
+                ingredient.push_str(" ");
+            });
+            println!("{}", ingredient);
+            ingredients.push_str(&ingredient);
+            //Delimiter
+            ingredients.push_str("!");
+        }
 
         let new_recipe_details = RecipeDetail {
             times,
             bio,
+            ingredients,
         };
         return new_recipe_details;
     }
@@ -107,6 +126,7 @@ fn main() {
             let recipe_details = fetchDetails(crawler_url);  //call function with url
             let bio = recipe_details.bio;
             let times = recipe_details.times;
+            let ingredients = recipe_details.ingredients;
   
             let new_recipe = Recipe {
                 url, 
@@ -114,6 +134,7 @@ fn main() {
                 image,
                 bio,
                 times,
+                ingredients,
             };
             recipes.push(new_recipe);
         }
@@ -121,7 +142,7 @@ fn main() {
         let path = std::path::Path::new(&pathStr);
         let mut writer = csv::Writer::from_path(path).unwrap();
 
-        writer.write_record(&["url","title","image", "bio", "times"]).unwrap();
+        writer.write_record(&["url","title","image", "bio", "times", "ingredients"]).unwrap();
 
         for recipe in recipes {
             let url = recipe.url;
@@ -129,8 +150,9 @@ fn main() {
             let image = recipe.image;
             let bio = recipe.bio;
             let times = recipe.times;
+            let ingredients = recipe.ingredients;
 
-            writer.write_record(&[url,title,image, bio, times]).unwrap();
+            writer.write_record(&[url,title,image, bio, times, ingredients]).unwrap();
         }
         writer.flush().unwrap();
     }
